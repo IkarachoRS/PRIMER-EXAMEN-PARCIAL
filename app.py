@@ -299,7 +299,7 @@ if summary:
                 else:
                     st.error(f"❌ {traduccion if traduccion else 'No se pudo traducir'}")
         else:
-            st.info("Traduccion Realizada con Gemini AI")
+            st.info("🔑 Configura la API de Gemini en Settings → Secrets para activar la traducción")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -322,6 +322,19 @@ def calculate_rsi(data, period=14):
 hist['SMA_20'] = calculate_sma(hist, 20)
 hist['SMA_50'] = calculate_sma(hist, 50)
 hist['RSI'] = calculate_rsi(hist)
+
+# Calcular Bandas de Bollinger
+hist['BB_middle'] = hist['Close'].rolling(window=20).mean()
+bb_std = hist['Close'].rolling(window=20).std()
+hist['BB_upper'] = hist['BB_middle'] + (bb_std * 2)
+hist['BB_lower'] = hist['BB_middle'] - (bb_std * 2)
+
+# Calcular MACD
+exp1 = hist['Close'].ewm(span=12, adjust=False).mean()
+exp2 = hist['Close'].ewm(span=26, adjust=False).mean()
+hist['MACD'] = exp1 - exp2
+hist['Signal'] = hist['MACD'].ewm(span=9, adjust=False).mean()
+hist['MACD_hist'] = hist['MACD'] - hist['Signal']
 
 precio = float(hist['Close'].iloc[-1])
 precio_anterior = float(hist['Close'].iloc[-2]) if len(hist) > 1 else precio
@@ -346,70 +359,229 @@ st.markdown("<br>", unsafe_allow_html=True)
 tab1, tab2, tab3 = st.tabs(["📈 Análisis Técnico", "📊 Comparativa S&P 500", "💰 Indicadores Financieros"])
 
 with tab1:
-    st.markdown("### Análisis Técnico")
+    st.markdown("### Análisis Técnico Avanzado")
     
     fig = make_subplots(
-        rows=3, cols=1,
+        rows=4, cols=1,
         shared_xaxes=True,
-        vertical_spacing=0.05,
-        subplot_titles=('Precio y Medias Móviles', 'Volumen', 'RSI'),
-        row_heights=[0.5, 0.25, 0.25]
+        vertical_spacing=0.03,
+        subplot_titles=(
+            f'{ticker} - Gráfica de Velas con Indicadores',
+            'Volumen de Operaciones',
+            'MACD (Moving Average Convergence Divergence)',
+            'RSI (Relative Strength Index)'
+        ),
+        row_heights=[0.45, 0.15, 0.2, 0.2]
     )
 
+    # 1. GRÁFICA DE VELAS (CANDLESTICK)
     fig.add_trace(
-        go.Scatter(x=hist.index, y=hist['Close'], name='Precio',
-                   line=dict(color='#0071e3', width=2.5)),
+        go.Candlestick(
+            x=hist.index,
+            open=hist['Open'],
+            high=hist['High'],
+            low=hist['Low'],
+            close=hist['Close'],
+            name='Precio',
+            increasing_line_color='#30d158',
+            decreasing_line_color='#ff375f',
+            increasing_fillcolor='#30d158',
+            decreasing_fillcolor='#ff375f'
+        ),
         row=1, col=1
     )
-
-    if not hist['SMA_20'].isna().all():
+    
+    # Bandas de Bollinger
+    if not hist['BB_upper'].isna().all():
         fig.add_trace(
-            go.Scatter(x=hist.index, y=hist['SMA_20'], name='SMA 20',
-                       line=dict(color='#ff9500', width=2, dash='dash')),
+            go.Scatter(
+                x=hist.index, y=hist['BB_upper'],
+                name='BB Superior',
+                line=dict(color='rgba(150, 150, 150, 0.5)', width=1, dash='dot'),
+                showlegend=True
+            ),
             row=1, col=1
         )
-
+        fig.add_trace(
+            go.Scatter(
+                x=hist.index, y=hist['BB_middle'],
+                name='BB Media (SMA 20)',
+                line=dict(color='#0071e3', width=2),
+                showlegend=True
+            ),
+            row=1, col=1
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=hist.index, y=hist['BB_lower'],
+                name='BB Inferior',
+                line=dict(color='rgba(150, 150, 150, 0.5)', width=1, dash='dot'),
+                fill='tonexty',
+                fillcolor='rgba(0, 113, 227, 0.05)',
+                showlegend=True
+            ),
+            row=1, col=1
+        )
+    
+    # SMA 50
     if not hist['SMA_50'].isna().all():
         fig.add_trace(
-            go.Scatter(x=hist.index, y=hist['SMA_50'], name='SMA 50',
-                       line=dict(color='#ff375f', width=2, dash='dot')),
+            go.Scatter(
+                x=hist.index, y=hist['SMA_50'],
+                name='SMA 50',
+                line=dict(color='#ff9500', width=2.5, dash='dash'),
+                showlegend=True
+            ),
             row=1, col=1
         )
 
-    colors = ['#ff375f' if hist['Close'].iloc[i] < hist['Close'].iloc[i-1] else '#30d158' 
-              for i in range(1, len(hist))]
-    colors.insert(0, '#30d158')
+    # 2. VOLUMEN CON GRADIENTE
+    colors = ['rgba(255, 55, 95, 0.7)' if hist['Close'].iloc[i] < hist['Open'].iloc[i] 
+              else 'rgba(48, 209, 88, 0.7)' for i in range(len(hist))]
 
     fig.add_trace(
-        go.Bar(x=hist.index, y=hist['Volume'], name='Volumen', marker_color=colors),
+        go.Bar(
+            x=hist.index,
+            y=hist['Volume'],
+            name='Volumen',
+            marker_color=colors,
+            showlegend=False
+        ),
         row=2, col=1
     )
 
-    if not hist['RSI'].isna().all():
+    # 3. MACD
+    if not hist['MACD'].isna().all():
         fig.add_trace(
-            go.Scatter(x=hist.index, y=hist['RSI'], name='RSI',
-                       line=dict(color='#bf5af2', width=2.5)),
+            go.Scatter(
+                x=hist.index, y=hist['MACD'],
+                name='MACD',
+                line=dict(color='#0071e3', width=2)
+            ),
             row=3, col=1
         )
-        fig.add_hline(y=70, line_dash="dash", line_color="#ff375f", row=3, col=1, opacity=0.5)
-        fig.add_hline(y=30, line_dash="dash", line_color="#30d158", row=3, col=1, opacity=0.5)
+        fig.add_trace(
+            go.Scatter(
+                x=hist.index, y=hist['Signal'],
+                name='Señal',
+                line=dict(color='#ff9500', width=2)
+            ),
+            row=3, col=1
+        )
+        
+        # Histograma MACD
+        macd_colors = ['#30d158' if val >= 0 else '#ff375f' for val in hist['MACD_hist']]
+        fig.add_trace(
+            go.Bar(
+                x=hist.index, y=hist['MACD_hist'],
+                name='Histograma',
+                marker_color=macd_colors,
+                showlegend=False
+            ),
+            row=3, col=1
+        )
 
+    # 4. RSI CON ZONAS COLOREADAS
+    if not hist['RSI'].isna().all():
+        fig.add_trace(
+            go.Scatter(
+                x=hist.index, y=hist['RSI'],
+                name='RSI',
+                line=dict(color='#bf5af2', width=2.5),
+                fill='tozeroy',
+                fillcolor='rgba(191, 90, 242, 0.1)'
+            ),
+            row=4, col=1
+        )
+        
+        # Zonas de sobrecompra y sobreventa
+        fig.add_hrect(y0=70, y1=100, fillcolor="rgba(255, 55, 95, 0.1)", 
+                     layer="below", line_width=0, row=4, col=1)
+        fig.add_hrect(y0=0, y1=30, fillcolor="rgba(48, 209, 88, 0.1)", 
+                     layer="below", line_width=0, row=4, col=1)
+        fig.add_hline(y=70, line_dash="dash", line_color="#ff375f", 
+                     row=4, col=1, opacity=0.6, line_width=1)
+        fig.add_hline(y=50, line_dash="dot", line_color="#86868b", 
+                     row=4, col=1, opacity=0.4, line_width=1)
+        fig.add_hline(y=30, line_dash="dash", line_color="#30d158", 
+                     row=4, col=1, opacity=0.6, line_width=1)
+
+    # Configuración profesional del layout
     fig.update_layout(
-        height=800,
+        height=950,
         template='plotly_white',
         showlegend=True,
         hovermode='x unified',
         paper_bgcolor='white',
-        plot_bgcolor='#f5f5f7',
-        font=dict(family="SF Pro Display, -apple-system, sans-serif", color="#1d1d1f")
+        plot_bgcolor='#fafafa',
+        font=dict(family="SF Pro Display, -apple-system, sans-serif", size=11, color="#1d1d1f"),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1,
+            bgcolor="rgba(255, 255, 255, 0.8)"
+        ),
+        xaxis_rangeslider_visible=False
     )
     
-    fig.update_xaxes(title_text="Fecha", row=3, col=1)
-    fig.update_yaxes(title_text="Precio USD", row=1, col=1)
-    fig.update_yaxes(title_text="Volumen", row=2, col=1)
-    fig.update_yaxes(title_text="RSI", row=3, col=1)
+    # Mejorar apariencia de los ejes
+    fig.update_xaxes(
+        showgrid=True,
+        gridwidth=1,
+        gridcolor='rgba(200, 200, 200, 0.2)',
+        showline=True,
+        linewidth=1,
+        linecolor='#d2d2d7'
+    )
+    fig.update_yaxes(
+        showgrid=True,
+        gridwidth=1,
+        gridcolor='rgba(200, 200, 200, 0.2)',
+        showline=True,
+        linewidth=1,
+        linecolor='#d2d2d7'
+    )
+    
+    # Títulos de ejes
+    fig.update_xaxes(title_text="Fecha", row=4, col=1, title_font=dict(size=12, color="#424245"))
+    fig.update_yaxes(title_text="Precio (USD)", row=1, col=1, title_font=dict(size=11, color="#424245"))
+    fig.update_yaxes(title_text="Volumen", row=2, col=1, title_font=dict(size=11, color="#424245"))
+    fig.update_yaxes(title_text="MACD", row=3, col=1, title_font=dict(size=11, color="#424245"))
+    fig.update_yaxes(title_text="RSI", row=4, col=1, title_font=dict(size=11, color="#424245"))
 
     st.plotly_chart(fig, use_container_width=True)
+    
+    # Análisis técnico resumido
+    st.markdown("#### 🎯 Señales Técnicas")
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        rsi_signal = "🟢 COMPRA" if rsi_actual < 30 else "🔴 VENTA" if rsi_actual > 70 else "🟡 NEUTRAL"
+        st.metric("RSI", f"{rsi_actual:.1f}", rsi_signal)
+    
+    with col2:
+        if not pd.isna(hist['SMA_50'].iloc[-1]):
+            sma_signal = "🟢 ALCISTA" if precio > hist['SMA_50'].iloc[-1] else "🔴 BAJISTA"
+            st.metric("SMA 50", f"${hist['SMA_50'].iloc[-1]:.2f}", sma_signal)
+        else:
+            st.metric("SMA 50", "N/A", "Sin datos")
+    
+    with col3:
+        if not pd.isna(hist['MACD'].iloc[-1]) and not pd.isna(hist['Signal'].iloc[-1]):
+            macd_signal = "🟢 POSITIVO" if hist['MACD'].iloc[-1] > hist['Signal'].iloc[-1] else "🔴 NEGATIVO"
+            st.metric("MACD", f"{hist['MACD'].iloc[-1]:.2f}", macd_signal)
+        else:
+            st.metric("MACD", "N/A", "Sin datos")
+    
+    with col4:
+        if not pd.isna(hist['BB_upper'].iloc[-1]) and not pd.isna(hist['BB_lower'].iloc[-1]):
+            bb_position = (precio - hist['BB_lower'].iloc[-1]) / (hist['BB_upper'].iloc[-1] - hist['BB_lower'].iloc[-1]) * 100
+            bb_signal = "🟢 CERCA INFERIOR" if bb_position < 20 else "🔴 CERCA SUPERIOR" if bb_position > 80 else "🟡 EN MEDIO"
+            st.metric("Bollinger", f"{bb_position:.0f}%", bb_signal)
+        else:
+            st.metric("Bollinger", "N/A", "Sin datos")
 
 with tab2:
     st.markdown("### Comparativa vs S&P 500")
@@ -420,41 +592,131 @@ with tab2:
         norm_stock = (hist['Close'] / float(hist['Close'].iloc[0])) * 100
         norm_sp500 = (sp500['Close'] / float(sp500['Close'].iloc[0])) * 100
         
-        fig2 = go.Figure()
+        # Calcular outperformance
+        outperformance = norm_stock - norm_sp500
+        
+        fig2 = make_subplots(
+            rows=2, cols=1,
+            shared_xaxes=True,
+            vertical_spacing=0.08,
+            subplot_titles=(
+                'Rendimiento Acumulado (Base 100)',
+                'Outperformance vs S&P 500'
+            ),
+            row_heights=[0.65, 0.35]
+        )
+        
+        # Gráfica principal
         fig2.add_trace(go.Scatter(
             x=hist.index, y=norm_stock, name=ticker,
-            line=dict(color='#0071e3', width=3),
+            line=dict(color='#0071e3', width=3.5),
             fill='tozeroy',
-            fillcolor='rgba(0, 113, 227, 0.1)'
-        ))
+            fillcolor='rgba(0, 113, 227, 0.08)',
+            hovertemplate='<b>%{x}</b><br>' + ticker + ': %{y:.2f}<extra></extra>'
+        ), row=1, col=1)
+        
         fig2.add_trace(go.Scatter(
             x=sp500.index, y=norm_sp500, name='S&P 500',
-            line=dict(color='#ff9500', width=3, dash='dot')
-        ))
+            line=dict(color='#ff9500', width=3, dash='dot'),
+            hovertemplate='<b>%{x}</b><br>S&P 500: %{y:.2f}<extra></extra>'
+        ), row=1, col=1)
+        
+        # Línea de referencia en 100
+        fig2.add_hline(y=100, line_dash="dot", line_color="#86868b", 
+                      row=1, col=1, opacity=0.5, line_width=1)
+        
+        # Outperformance
+        colors_out = ['rgba(48, 209, 88, 0.6)' if val >= 0 else 'rgba(255, 55, 95, 0.6)' 
+                     for val in outperformance]
+        
+        fig2.add_trace(go.Bar(
+            x=hist.index, y=outperformance,
+            name='Diferencia',
+            marker_color=colors_out,
+            showlegend=False,
+            hovertemplate='<b>%{x}</b><br>Diferencia: %{y:.2f}%<extra></extra>'
+        ), row=2, col=1)
+        
+        fig2.add_hline(y=0, line_dash="solid", line_color="#1d1d1f", 
+                      row=2, col=1, opacity=0.8, line_width=1.5)
         
         fig2.update_layout(
-            height=500,
+            height=600,
             template='plotly_white',
             hovermode='x unified',
-            yaxis_title="Rendimiento (Base 100)",
-            xaxis_title="Fecha",
             paper_bgcolor='white',
-            plot_bgcolor='#f5f5f7',
-            font=dict(family="SF Pro Display, -apple-system, sans-serif", color="#1d1d1f")
+            plot_bgcolor='#fafafa',
+            font=dict(family="SF Pro Display, -apple-system, sans-serif", size=11, color="#1d1d1f"),
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1,
+                bgcolor="rgba(255, 255, 255, 0.8)"
+            )
         )
+        
+        fig2.update_xaxes(
+            showgrid=True, gridwidth=1, gridcolor='rgba(200, 200, 200, 0.2)',
+            showline=True, linewidth=1, linecolor='#d2d2d7',
+            title_text="Fecha", row=2, col=1, title_font=dict(size=12, color="#424245")
+        )
+        fig2.update_yaxes(
+            showgrid=True, gridwidth=1, gridcolor='rgba(200, 200, 200, 0.2)',
+            showline=True, linewidth=1, linecolor='#d2d2d7'
+        )
+        fig2.update_yaxes(title_text="Base 100", row=1, col=1, title_font=dict(size=11, color="#424245"))
+        fig2.update_yaxes(title_text="Diferencia (%)", row=2, col=1, title_font=dict(size=11, color="#424245"))
         
         st.plotly_chart(fig2, use_container_width=True)
         
+        # Métricas de rendimiento mejoradas
         ret_stock = ((float(hist['Close'].iloc[-1]) / float(hist['Close'].iloc[0])) - 1) * 100
         ret_sp500 = ((float(sp500['Close'].iloc[-1]) / float(sp500['Close'].iloc[0])) - 1) * 100
         returns_stock = hist['Close'].pct_change().dropna()
+        returns_sp500 = sp500['Close'].pct_change().dropna()
         vol_anual = returns_stock.std() * np.sqrt(252) * 100
         
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Rendimiento", f"{ret_stock:.2f}%")
-        col2.metric("S&P 500", f"{ret_sp500:.2f}%")
-        col3.metric("Alpha", f"{ret_stock - ret_sp500:+.2f}%")
-        col4.metric("Volatilidad", f"{vol_anual:.1f}%")
+        # Calcular correlación y beta
+        common_dates = returns_stock.index.intersection(returns_sp500.index)
+        if len(common_dates) > 20:
+            ret_s = returns_stock.loc[common_dates]
+            ret_sp = returns_sp500.loc[common_dates]
+            correlation = ret_s.corr(ret_sp)
+            covariance = ret_s.cov(ret_sp)
+            variance_sp = ret_sp.var()
+            beta = covariance / variance_sp if variance_sp != 0 else 0
+        else:
+            correlation = 0
+            beta = 0
+        
+        # Sharpe Ratio
+        risk_free_rate = 4.0 / 100
+        sharpe = (ret_stock/100 - risk_free_rate) / (vol_anual/100) if vol_anual > 0 else 0
+        
+        st.markdown("#### 📊 Análisis Comparativo Detallado")
+        
+        col1, col2, col3, col4, col5 = st.columns(5)
+        col1.metric(f"📈 {ticker}", f"{ret_stock:+.2f}%")
+        col2.metric("📊 S&P 500", f"{ret_sp500:+.2f}%")
+        col3.metric("⚡ Alpha", f"{ret_stock - ret_sp500:+.2f}%", 
+                   delta="Positivo" if ret_stock > ret_sp500 else "Negativo")
+        col4.metric("📉 Beta", f"{beta:.2f}")
+        col5.metric("🎯 Sharpe", f"{sharpe:.2f}")
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("📊 Volatilidad Anual", f"{vol_anual:.2f}%")
+        col2.metric("🔗 Correlación", f"{correlation:.2f}")
+        
+        # Análisis textual
+        if ret_stock > ret_sp500:
+            performance_text = f"✅ **{ticker} ha superado al S&P 500** por {ret_stock - ret_sp500:.2f} puntos porcentuales."
+        else:
+            performance_text = f"⚠️ **{ticker} está por debajo del S&P 500** por {ret_sp500 - ret_stock:.2f} puntos porcentuales."
+        
+        st.info(performance_text)
+        
     else:
         st.warning("⚠️ No se pudo cargar S&P 500")
 
