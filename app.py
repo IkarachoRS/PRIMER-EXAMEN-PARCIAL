@@ -21,24 +21,16 @@ except Exception as e:
 # Función para traducir con Gemini
 @st.cache_data(ttl=86400, show_spinner=False)
 def translate_to_spanish(text):
-    """Traduce texto al español usando Gemini 1.5 Flash"""
+    """Traduce texto al español usando Gemini"""
     if not GEMINI_AVAILABLE or not text or len(text) < 10:
         return None
     
     try:
-        # Usar el modelo correcto: gemini-1.5-flash
-        model = genai.GenerativeModel(
-            model_name='gemini-1.5-flash',
-            generation_config={
-                'temperature': 0.3,
-                'top_p': 0.95,
-                'top_k': 40,
-                'max_output_tokens': 8192,
-            }
-        )
+        # Usar gemini-pro que es el modelo estable y disponible para todas las API keys
+        model = genai.GenerativeModel('gemini-pro')
         
         prompt = f"""Eres un traductor profesional. Traduce el siguiente texto del inglés al español de manera clara y profesional.
-        
+
 IMPORTANTE: Solo devuelve la traducción en español, sin agregar explicaciones, comentarios o texto adicional.
 
 Texto a traducir:
@@ -56,13 +48,13 @@ Traducción:"""
     except Exception as e:
         error_msg = str(e)
         if "404" in error_msg:
-            return "Error 404: Modelo no encontrado. Verifica tu API key en Google AI Studio."
-        elif "PERMISSION_DENIED" in error_msg:
-            return "Error: API key inválida o sin permisos. Genera una nueva en https://aistudio.google.com/apikey"
+            return "Error: Modelo no disponible. Generando nueva API key puede ayudar."
+        elif "PERMISSION_DENIED" in error_msg or "API_KEY_INVALID" in error_msg:
+            return "Error: API key inválida. Ve a https://aistudio.google.com/apikey y genera una nueva."
         elif "RESOURCE_EXHAUSTED" in error_msg:
             return "Error: Límite de API alcanzado. Espera unos minutos."
         else:
-            return f"Error al traducir: {error_msg}"
+            return f"Error: {error_msg}"
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap');
