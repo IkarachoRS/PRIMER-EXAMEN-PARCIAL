@@ -9,13 +9,14 @@ import google.generativeai as genai
 st.set_page_config(page_title="Análisis Bursátil", layout="wide", page_icon="📊")
 
 # Configurar Gemini API
+GEMINI_AVAILABLE = False
 try:
-    GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-1.5-flash')
-except:
-    model = None
-    st.warning("⚠️ API de Gemini no configurada. La traducción no estará disponible.")
+    GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
+    if GEMINI_API_KEY:
+        genai.configure(api_key=GEMINI_API_KEY)
+        GEMINI_AVAILABLE = True
+except Exception as e:
+    st.sidebar.error(f"⚠️ Error Gemini: {str(e)}")
 
 # CSS estilo Apple
 st.markdown("""
@@ -185,10 +186,12 @@ if not ticker:
 @st.cache_data(ttl=86400, show_spinner=False)
 def translate_to_spanish(text):
     """Traduce texto al español usando Gemini"""
-    if not model or not text:
+    if not GEMINI_AVAILABLE or not text:
         return None
     
     try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
         prompt = f"""Traduce el siguiente texto al español de manera profesional y precisa. 
         Solo devuelve la traducción, sin explicaciones adicionales:
         
@@ -197,8 +200,7 @@ def translate_to_spanish(text):
         response = model.generate_content(prompt)
         return response.text.strip()
     except Exception as e:
-        st.error(f"Error al traducir: {str(e)}")
-        return None
+        return f"Error: {str(e)}"
 
 @st.cache_data(ttl=1800, show_spinner=False)
 def get_stock_data(symbol, period):
@@ -285,19 +287,19 @@ if summary:
         st.markdown(f"<div style='color: #1d1d1f;'>{summary}</div>", unsafe_allow_html=True)
         
         # Traducción con Gemini
-        if model:
+        if GEMINI_AVAILABLE:
             with st.spinner("🌐 Traduciendo al español..."):
                 traduccion = translate_to_spanish(summary)
                 
-                if traduccion:
+                if traduccion and not traduccion.startswith("Error"):
                     st.markdown("<div class='translation-box'>", unsafe_allow_html=True)
                     st.markdown("**📝 Traducción al Español:**")
                     st.markdown(f"<div style='color: #1d1d1f;'>{traduccion}</div>", unsafe_allow_html=True)
                     st.markdown("</div>", unsafe_allow_html=True)
                 else:
-                    st.info("No se pudo traducir el texto")
+                    st.error(f"❌ {traduccion if traduccion else 'No se pudo traducir'}")
         else:
-            st.info("🔑 Configura la API de Gemini para activar la traducción automática")
+            st.info("🔑 Configura la API de Gemini en Settings → Secrets para activar la traducción")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
