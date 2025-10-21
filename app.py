@@ -18,30 +18,43 @@ try:
 except Exception as e:
     st.sidebar.warning(f"⚠️ Gemini no disponible: {str(e)}")
 
-# Función para traducir con Gemini - VERSIÓN 2.0
+# Función para traducir con Gemini - VERSIÓN BETA
 def translate_to_spanish_v2(text):
-    """Traduce texto al español usando Gemini Pro - NUEVA VERSION"""
+    """Traduce texto al español usando Gemini 2.0 Flash (Beta/Experimental)"""
     if not GEMINI_AVAILABLE or not text or len(text) < 10:
         return None
     
     try:
-        # IMPORTANTE: Usar gemini-pro NO gemini-1.5-flash
-        model = genai.GenerativeModel('gemini-pro')
+        # USAR MODELO EXPERIMENTAL para API keys BETA
+        # Intentar con gemini-2.0-flash-exp primero
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
         
         # Limitar texto a 3000 caracteres
         text_to_translate = text[:3000] if len(text) > 3000 else text
         
-        prompt = f"Traduce este texto al español de forma profesional:\n\n{text_to_translate}"
+        prompt = f"Traduce este texto del inglés al español de forma profesional y clara:\n\n{text_to_translate}"
         
         response = model.generate_content(prompt)
         
         if response and response.text:
             return response.text.strip()
         else:
-            return "Error: No se recibió respuesta"
+            return "Error: No se recibió respuesta del modelo"
             
     except Exception as e:
-        return f"Error: {str(e)}"
+        error_str = str(e)
+        # Si falla el modelo experimental, intentar con otro
+        if "404" in error_str or "not found" in error_str.lower():
+            try:
+                # Intentar con gemini-exp-1206 (otro modelo beta)
+                model = genai.GenerativeModel('gemini-exp-1206')
+                response = model.generate_content(f"Traduce al español: {text[:2000]}")
+                if response and response.text:
+                    return response.text.strip()
+            except:
+                pass
+        
+        return f"Error Beta API: {error_str[:150]}"
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap');
@@ -307,7 +320,7 @@ summary = info.get('longBusinessSummary')
 if summary:
     with st.expander("📄 Ver descripción de la empresa"):
         # Indicador de versión - DEBUGGING
-        st.caption("🔄 Versión de código: 2.0 - Usando gemini-pro")
+        st.caption("🔄 Beta API - Usando gemini-2.0-flash-exp (experimental)")
         
         st.markdown("**Descripción Original (Inglés):**")
         st.markdown(f"<div style='color: #1d1d1f;'>{summary}</div>", unsafe_allow_html=True)
