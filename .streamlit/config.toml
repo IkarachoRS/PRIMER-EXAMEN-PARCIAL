@@ -1,0 +1,19 @@
+[server]
+enableCORS = false
+
+[browser]
+gatherUsageStats = false
+```
+
+---
+
+## 🗂️ Estructura final del proyecto:
+```
+tu-proyecto/
+│
+├── app.py                    ← Copia el código de arriba
+├── requirements.txt          ← Copia esto
+├── .gitignore               ← Copia esto
+├── README.md                ← Copia esto
+└── .streamlit/              ← Carpeta (opcional)
+    └── config.toml          ← Copia esto
