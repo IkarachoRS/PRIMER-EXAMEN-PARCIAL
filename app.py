@@ -8,7 +8,7 @@ import google.generativeai as genai
 
 st.set_page_config(page_title="Análisis Bursátil", layout="wide", page_icon="📊")
 
-# Configurar Gemini API
+# Configurar Gemini API correctamente
 GEMINI_AVAILABLE = False
 try:
     GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
@@ -16,9 +16,53 @@ try:
         genai.configure(api_key=GEMINI_API_KEY)
         GEMINI_AVAILABLE = True
 except Exception as e:
-    st.sidebar.error(f"⚠️ Error Gemini: {str(e)}")
+    st.sidebar.warning(f"⚠️ Gemini no disponible: {str(e)}")
 
-# CSS estilo Apple
+# Función para traducir con Gemini
+@st.cache_data(ttl=86400, show_spinner=False)
+def translate_to_spanish(text):
+    """Traduce texto al español usando Gemini 1.5 Flash"""
+    if not GEMINI_AVAILABLE or not text or len(text) < 10:
+        return None
+    
+    try:
+        # Usar el modelo correcto: gemini-1.5-flash
+        model = genai.GenerativeModel(
+            model_name='gemini-1.5-flash',
+            generation_config={
+                'temperature': 0.3,
+                'top_p': 0.95,
+                'top_k': 40,
+                'max_output_tokens': 8192,
+            }
+        )
+        
+        prompt = f"""Eres un traductor profesional. Traduce el siguiente texto del inglés al español de manera clara y profesional.
+        
+IMPORTANTE: Solo devuelve la traducción en español, sin agregar explicaciones, comentarios o texto adicional.
+
+Texto a traducir:
+{text}
+
+Traducción:"""
+        
+        response = model.generate_content(prompt)
+        
+        if response and response.text:
+            return response.text.strip()
+        else:
+            return "No se pudo obtener traducción"
+            
+    except Exception as e:
+        error_msg = str(e)
+        if "404" in error_msg:
+            return "Error 404: Modelo no encontrado. Verifica tu API key en Google AI Studio."
+        elif "PERMISSION_DENIED" in error_msg:
+            return "Error: API key inválida o sin permisos. Genera una nueva en https://aistudio.google.com/apikey"
+        elif "RESOURCE_EXHAUSTED" in error_msg:
+            return "Error: Límite de API alcanzado. Espera unos minutos."
+        else:
+            return f"Error al traducir: {error_msg}"
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap');
@@ -283,23 +327,27 @@ with col4:
 summary = info.get('longBusinessSummary')
 if summary:
     with st.expander("📄 Ver descripción de la empresa"):
-        st.markdown("**Descripción Original:**")
+        st.markdown("**Descripción Original (Inglés):**")
         st.markdown(f"<div style='color: #1d1d1f;'>{summary}</div>", unsafe_allow_html=True)
         
         # Traducción con Gemini
         if GEMINI_AVAILABLE:
-            with st.spinner("🌐 Traduciendo al español..."):
+            with st.spinner("🤖 Traduciendo con Gemini AI..."):
                 traduccion = translate_to_spanish(summary)
                 
                 if traduccion and not traduccion.startswith("Error"):
+                    st.markdown("<br>", unsafe_allow_html=True)
                     st.markdown("<div class='translation-box'>", unsafe_allow_html=True)
-                    st.markdown("**📝 Traducción al Español:**")
+                    st.markdown("**📝 Traducción al Español (powered by Gemini):**")
                     st.markdown(f"<div style='color: #1d1d1f;'>{traduccion}</div>", unsafe_allow_html=True)
                     st.markdown("</div>", unsafe_allow_html=True)
+                elif traduccion:
+                    st.error(f"❌ {traduccion}")
+                    st.info("💡 **Solución:** Ve a https://aistudio.google.com/apikey y genera una nueva API key, luego actualízala en Settings → Secrets")
                 else:
-                    st.error(f"❌ {traduccion if traduccion else 'No se pudo traducir'}")
+                    st.warning("⚠️ No se pudo traducir el texto")
         else:
-            st.info("🔑 Configura la API de Gemini en Settings → Secrets para activar la traducción")
+            st.info("🔑 **Para activar la traducción con Gemini:**\n\n1. Ve a Settings → Secrets\n2. Agrega: `GEMINI_API_KEY = \"tu-api-key\"`\n3. Genera tu API key en: https://aistudio.google.com/apikey")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -790,7 +838,7 @@ with tab3:
 
 st.markdown("<br><br>", unsafe_allow_html=True)
 st.markdown(
-    f"<p style='text-align: center; color: #86868b; font-size: 0.9rem;'>Datos proporcionados por Yahoo Finance | "
-    f"Traducción powered by Google Gemini | {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}</p>",
+    f"<p style='text-align: center; color: #86868b; font-size: 0.9rem;'>📊 Datos: Yahoo Finance | "
+    f"🤖 Traducción: Google Gemini AI | {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}</p>",
     unsafe_allow_html=True
 )
