@@ -206,13 +206,111 @@ st.markdown("""
 st.markdown("<h1 style='text-align: center;'>📊 Análisis Bursátil</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: #6e6e73; font-size: 1.2rem; margin-bottom: 40px;'>Análisis financiero profesional en tiempo real</p>", unsafe_allow_html=True)
 
-# Sidebar
-st.sidebar.markdown("### Configuración")
-ticker = st.sidebar.text_input("Ticker", "AAPL", placeholder="Ej: AAPL").upper().strip()
-periodo = st.sidebar.selectbox("Período de análisis", ["1mo", "3mo", "6mo", "1y", "2y"], index=2)
+# Sidebar con estilo mejorado
+st.sidebar.markdown("""
+    <div style='text-align: center; padding: 20px 0;'>
+        <h1 style='font-size: 2.5rem; margin: 0; background: linear-gradient(120deg, #0071e3 0%, #00c4cc 100%);
+                   -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800;'>
+            📊
+        </h1>
+        <h3 style='color: #1d1d1f; margin: 10px 0 5px 0; font-weight: 600;'>Análisis Bursátil</h3>
+        <p style='color: #86868b; font-size: 0.85rem; margin: 0;'>Análisis profesional en tiempo real</p>
+    </div>
+""", unsafe_allow_html=True)
+
 st.sidebar.markdown("---")
-st.sidebar.markdown("**Ejemplos populares**")
-st.sidebar.code("AAPL  MSFT  GOOGL\nTSLA  NVDA  META")
+
+# Input de ticker con estilo
+st.sidebar.markdown("### 🔍 Buscar Acción")
+ticker = st.sidebar.text_input(
+    "Ingresa el ticker",
+    value="AAPL",
+    placeholder="Ej: AAPL, MSFT, GOOGL",
+    label_visibility="collapsed"
+).upper().strip()
+
+# Selector de período
+st.sidebar.markdown("### 📅 Período de Análisis")
+periodo = st.sidebar.selectbox(
+    "Selecciona el período",
+    ["1mo", "3mo", "6mo", "1y", "2y"],
+    index=2,
+    label_visibility="collapsed"
+)
+
+st.sidebar.markdown("---")
+
+# Ejemplos populares con botones clickeables
+st.sidebar.markdown("### ⭐ Acciones Populares")
+
+# Crear botones en grid
+col1, col2, col3 = st.sidebar.columns(3)
+
+popular_stocks = {
+    "AAPL": "🍎",
+    "MSFT": "🪟",
+    "GOOGL": "🔍",
+    "TSLA": "🚗",
+    "NVDA": "🎮",
+    "META": "📱"
+}
+
+# CSS para los botones
+st.sidebar.markdown("""
+    <style>
+    .stock-button {
+        display: inline-block;
+        padding: 8px 12px;
+        margin: 4px 2px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+    .stock-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Mostrar botones
+button_html = "<div style='text-align: center;'>"
+for stock, emoji in popular_stocks.items():
+    button_html += f"<span class='stock-button'>{emoji} {stock}</span> "
+button_html += "</div>"
+st.sidebar.markdown(button_html, unsafe_allow_html=True)
+
+st.sidebar.markdown("---")
+
+# Información adicional
+st.sidebar.markdown("""
+    <div style='background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); 
+                padding: 15px; border-radius: 12px; margin-top: 20px;'>
+        <p style='margin: 0; font-size: 0.85rem; color: #1d1d1f;'>
+            <strong>💡 Consejo:</strong><br>
+            Cambia el período para ver diferentes perspectivas del mercado
+        </p>
+    </div>
+""", unsafe_allow_html=True)
+
+st.sidebar.markdown("<br>", unsafe_allow_html=True)
+
+# Footer del sidebar
+st.sidebar.markdown("""
+    <div style='text-align: center; padding-top: 20px; border-top: 1px solid #d2d2d7;'>
+        <p style='color: #86868b; font-size: 0.75rem; margin: 5px 0;'>
+            Powered by<br>
+            <strong>Yahoo Finance & Gemini AI</strong>
+        </p>
+    </div>
+""", unsafe_allow_html=True)
 
 if not ticker:
     st.warning("⚠️ Por favor ingresa un ticker")
