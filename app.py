@@ -12,7 +12,7 @@ st.set_page_config(page_title="Análisis Bursátil", layout="wide", page_icon="�
 try:
     GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-1.5-flash')
 except:
     model = None
     st.warning("⚠️ API de Gemini no configurada. La traducción no estará disponible.")
