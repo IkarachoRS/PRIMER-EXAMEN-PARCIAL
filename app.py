@@ -299,7 +299,7 @@ if summary:
                 else:
                     st.error(f"❌ {traduccion if traduccion else 'No se pudo traducir'}")
         else:
-            st.info("🔑 Configura la API de Gemini en Settings → Secrets para activar la traducción")
+            st.info("ACABAS DE UTILIZAR GEMINI PARA TRADUCIR TU TEXTO")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
