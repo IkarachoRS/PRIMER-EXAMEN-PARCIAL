@@ -4,10 +4,20 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
+import google.generativeai as genai
 
 st.set_page_config(page_title="Análisis Bursátil", layout="wide", page_icon="📊")
 
-# CSS estilo Apple - limpio y minimalista
+# Configurar Gemini API
+try:
+    GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel('gemini-pro')
+except:
+    model = None
+    st.warning("⚠️ API de Gemini no configurada. La traducción no estará disponible.")
+
+# CSS estilo Apple
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap');
@@ -68,31 +78,6 @@ st.markdown("""
         font-weight: 500;
     }
     
-    .card-white {
-        background: white;
-        padding: 30px;
-        border-radius: 18px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-        margin-bottom: 20px;
-    }
-    
-    .info-section {
-        background: white;
-        padding: 25px;
-        border-radius: 18px;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-        margin-bottom: 15px;
-    }
-    
-    .metric-box {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 20px;
-        border-radius: 16px;
-        color: white;
-        text-align: center;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-    }
-    
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
         background-color: white;
@@ -113,11 +98,6 @@ st.markdown("""
     .stTabs [aria-selected="true"] {
         background-color: #0071e3;
         color: white !important;
-    }
-    
-    .sidebar .sidebar-content {
-        background-color: white;
-        padding: 20px;
     }
     
     [data-testid="stSidebar"] {
@@ -160,11 +140,9 @@ st.markdown("""
         border: 1px solid #d2d2d7;
     }
     
-    /* Ocultar elementos de Streamlit */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    /* Mejorar legibilidad */
     .element-container {
         color: #1d1d1f;
     }
@@ -176,14 +154,22 @@ st.markdown("""
         border-radius: 6px;
         font-family: 'SF Mono', Monaco, monospace;
     }
+    
+    .translation-box {
+        background-color: #f5f5f7;
+        padding: 20px;
+        border-radius: 12px;
+        margin-top: 15px;
+        border-left: 4px solid #0071e3;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# Header estilo Apple
+# Header
 st.markdown("<h1 style='text-align: center;'>📊 Análisis Bursátil</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: #6e6e73; font-size: 1.2rem; margin-bottom: 40px;'>Análisis financiero profesional en tiempo real</p>", unsafe_allow_html=True)
 
-# Sidebar limpio
+# Sidebar
 st.sidebar.markdown("### Configuración")
 ticker = st.sidebar.text_input("Ticker", "AAPL", placeholder="Ej: AAPL").upper().strip()
 periodo = st.sidebar.selectbox("Período de análisis", ["1mo", "3mo", "6mo", "1y", "2y"], index=2)
@@ -194,6 +180,25 @@ st.sidebar.code("AAPL  MSFT  GOOGL\nTSLA  NVDA  META")
 if not ticker:
     st.warning("⚠️ Por favor ingresa un ticker")
     st.stop()
+
+# Función para traducir con Gemini
+@st.cache_data(ttl=86400, show_spinner=False)
+def translate_to_spanish(text):
+    """Traduce texto al español usando Gemini"""
+    if not model or not text:
+        return None
+    
+    try:
+        prompt = f"""Traduce el siguiente texto al español de manera profesional y precisa. 
+        Solo devuelve la traducción, sin explicaciones adicionales:
+        
+        {text}"""
+        
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        st.error(f"Error al traducir: {str(e)}")
+        return None
 
 @st.cache_data(ttl=1800, show_spinner=False)
 def get_stock_data(symbol, period):
@@ -216,7 +221,7 @@ def get_sp500_data(period):
     except:
         return None
 
-with st.spinner(f"Cargando datos de {ticker}..."):
+with st.spinner(f"🚀 Cargando datos de {ticker}..."):
     hist, info = get_stock_data(ticker, periodo)
 
 if hist is None or hist.empty:
@@ -230,7 +235,6 @@ if info is None:
 st.markdown(f"## 🏢 {info.get('longName', ticker)}")
 st.markdown(f"<p style='color: #6e6e73; font-size: 1.1rem;'>{ticker}</p>", unsafe_allow_html=True)
 
-# Tarjetas de información
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
@@ -273,11 +277,27 @@ with col4:
     div_text = f"{div_yield*100:.2f}%" if div_yield else "N/A"
     st.markdown(f"<div style='color: #1d1d1f;'><b>Div. Yield:</b> {div_text}</div>", unsafe_allow_html=True)
 
-# Descripción
+# Descripción con traducción
 summary = info.get('longBusinessSummary')
 if summary:
     with st.expander("📄 Ver descripción de la empresa"):
+        st.markdown("**Descripción Original:**")
         st.markdown(f"<div style='color: #1d1d1f;'>{summary}</div>", unsafe_allow_html=True)
+        
+        # Traducción con Gemini
+        if model:
+            with st.spinner("🌐 Traduciendo al español..."):
+                traduccion = translate_to_spanish(summary)
+                
+                if traduccion:
+                    st.markdown("<div class='translation-box'>", unsafe_allow_html=True)
+                    st.markdown("**📝 Traducción al Español:**")
+                    st.markdown(f"<div style='color: #1d1d1f;'>{traduccion}</div>", unsafe_allow_html=True)
+                    st.markdown("</div>", unsafe_allow_html=True)
+                else:
+                    st.info("No se pudo traducir el texto")
+        else:
+            st.info("🔑 Configura la API de Gemini para activar la traducción automática")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -507,6 +527,6 @@ with tab3:
 st.markdown("<br><br>", unsafe_allow_html=True)
 st.markdown(
     f"<p style='text-align: center; color: #86868b; font-size: 0.9rem;'>Datos proporcionados por Yahoo Finance | "
-    f"{pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}</p>",
+    f"Traducción powered by Google Gemini | {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}</p>",
     unsafe_allow_html=True
 )
