@@ -308,9 +308,27 @@ with st.expander("🏢 Información de la Empresa"):
     
     with col2:
         employees = info.get('fullTimeEmployees')
-        st.write(f"**Empleados:** {employees:,}" if employees else "**Empleados:** N/A")
+        if employees:
+            st.write(f"**Empleados:** {employees:,}")
+        else:
+            st.write("**Empleados:** N/A")
         st.write(f"**Website:** {info.get('website', 'N/A')}")
         st.write(f"**Exchange:** {info.get('exchange', 'N/A')}")
         high_52 = info.get('fiftyTwoWeekHigh', 0)
         low_52 = info.get('fiftyTwoWeekLow', 0)
-        st.write(f"**52W High:** ${high_52:.2f}" if
+        if high_52:
+            st.write(f"**52W High:** ${high_52:.2f}")
+        else:
+            st.write("**52W High:** N/A")
+        if low_52:
+            st.write(f"**52W Low:** ${low_52:.2f}")
+        else:
+            st.write("**52W Low:** N/A")
+    
+    summary = info.get('longBusinessSummary')
+    if summary:
+        st.markdown("**Descripción del Negocio:**")
+        st.write(summary)
+
+st.markdown("---")
+st.caption(f"📊 Datos: Yahoo Finance | 🕐 Última actualización: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}")
