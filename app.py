@@ -19,42 +19,29 @@ except Exception as e:
     st.sidebar.warning(f"⚠️ Gemini no disponible: {str(e)}")
 
 # Función para traducir con Gemini
-@st.cache_data(ttl=86400, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False)  # Reducido a 1 hora para debug
 def translate_to_spanish(text):
-    """Traduce texto al español usando Gemini"""
+    """Traduce texto al español usando Gemini Pro"""
     if not GEMINI_AVAILABLE or not text or len(text) < 10:
         return None
     
     try:
-        # Usar gemini-pro que es el modelo estable y disponible para todas las API keys
+        # Modelo gemini-pro - compatible con todas las API keys
         model = genai.GenerativeModel('gemini-pro')
         
-        prompt = f"""Eres un traductor profesional. Traduce el siguiente texto del inglés al español de manera clara y profesional.
+        prompt = f"""Traduce este texto al español de forma profesional. Solo devuelve la traducción:
 
-IMPORTANTE: Solo devuelve la traducción en español, sin agregar explicaciones, comentarios o texto adicional.
-
-Texto a traducir:
-{text}
-
-Traducción:"""
+{text[:2000]}"""  # Limitar a 2000 caracteres para evitar errores
         
         response = model.generate_content(prompt)
         
         if response and response.text:
             return response.text.strip()
         else:
-            return "No se pudo obtener traducción"
+            return "Error: Sin respuesta del modelo"
             
     except Exception as e:
-        error_msg = str(e)
-        if "404" in error_msg:
-            return "Error: Modelo no disponible. Generando nueva API key puede ayudar."
-        elif "PERMISSION_DENIED" in error_msg or "API_KEY_INVALID" in error_msg:
-            return "Error: API key inválida. Ve a https://aistudio.google.com/apikey y genera una nueva."
-        elif "RESOURCE_EXHAUSTED" in error_msg:
-            return "Error: Límite de API alcanzado. Espera unos minutos."
-        else:
-            return f"Error: {error_msg}"
+        return f"Error Gemini: {str(e)[:100]}"
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap');
