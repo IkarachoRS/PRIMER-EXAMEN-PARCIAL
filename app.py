@@ -10,34 +10,60 @@ st.set_page_config(page_title="Análisis Bursátil", layout="wide", page_icon="�
 st.title("📈 Análisis Bursátil Profesional")
 
 # Sidebar
-ticker = st.sidebar.text_input("Ticker", "AAPL").upper()
+ticker = st.sidebar.text_input("Ticker", "AAPL").upper().strip()
 periodo = st.sidebar.selectbox("Período", ["1mo", "3mo", "6mo", "1y", "2y"], index=2)
 st.sidebar.markdown("---")
 st.sidebar.caption("💡 Ejemplos: AAPL, MSFT, GOOGL, TSLA, NVDA")
 
-@st.cache_data(ttl=1800)
-def get_data(tick, per):
+if not ticker:
+    st.warning("⚠️ Por favor ingresa un ticker")
+    st.stop()
+
+# Función para obtener datos
+@st.cache_data(ttl=1800, show_spinner=False)
+def get_stock_data(symbol, period):
     try:
-        stock = yf.Ticker(tick)
-        hist = stock.history(period=per)
+        stock = yf.Ticker(symbol)
+        hist = stock.history(period=period)
+        if hist.empty:
+            return None, None
         info = stock.info
         return hist, info
-    except:
+    except Exception as e:
+        st.error(f"Error al obtener datos: {str(e)}")
         return None, None
 
+@st.cache_data(ttl=1800, show_spinner=False)
+def get_sp500_data(period):
+    try:
+        sp500 = yf.Ticker("^GSPC")
+        hist = sp500.history(period=period)
+        return hist if not hist.empty else None
+    except:
+        return None
+
 # Cargar datos
-with st.spinner(f"Cargando {ticker}..."):
-    hist, info = get_data(ticker, periodo)
+with st.spinner(f"Cargando datos de {ticker}..."):
+    hist, info = get_stock_data(ticker, periodo)
 
 if hist is None or hist.empty:
-    st.error(f"❌ No se encontró el ticker: {ticker}")
+    st.error(f"❌ No se pudo obtener datos para '{ticker}'. Verifica que el ticker sea correcto.")
+    st.info("💡 Intenta con: AAPL, MSFT, GOOGL, TSLA, AMZN, NVDA, META")
     st.stop()
+
+# Verificar que info no esté vacío
+if info is None:
+    info = {}
 
 # Calcular indicadores técnicos
 def calculate_sma(data, window):
-    return data['Close'].rolling(window=window).mean()
+    if len(data) >= window:
+        return data['Close'].rolling(window=window).mean()
+    return pd.Series([np.nan] * len(data), index=data.index)
 
 def calculate_rsi(data, period=14):
+    if len(data) < period:
+        return pd.Series([np.nan] * len(data), index=data.index)
     delta = data['Close'].diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
@@ -51,18 +77,19 @@ hist['RSI'] = calculate_rsi(hist)
 
 # Métricas principales
 precio = float(hist['Close'].iloc[-1])
-precio_anterior = float(hist['Close'].iloc[-2])
+precio_anterior = float(hist['Close'].iloc[-2]) if len(hist) > 1 else precio
 cambio = ((precio / precio_anterior) - 1) * 100
 maximo = float(hist['High'].max())
 minimo = float(hist['Low'].min())
 volumen_prom = int(hist['Volume'].mean())
+rsi_actual = hist['RSI'].iloc[-1] if not pd.isna(hist['RSI'].iloc[-1]) else 0
 
 col1, col2, col3, col4, col5 = st.columns(5)
 col1.metric("Precio Actual", f"${precio:.2f}", f"{cambio:+.2f}%")
 col2.metric("Máximo", f"${maximo:.2f}")
 col3.metric("Mínimo", f"${minimo:.2f}")
 col4.metric("Vol. Promedio", f"{volumen_prom/1e6:.1f}M")
-col5.metric("RSI (14)", f"{hist['RSI'].iloc[-1]:.1f}")
+col5.metric("RSI (14)", f"{rsi_actual:.1f}")
 
 st.markdown("---")
 
@@ -83,33 +110,42 @@ fig.add_trace(
                line=dict(color='#00CC96', width=2)),
     row=1, col=1
 )
-fig.add_trace(
-    go.Scatter(x=hist.index, y=hist['SMA_20'], name='SMA 20',
-               line=dict(color='#FFA15A', width=1.5, dash='dash')),
-    row=1, col=1
-)
-fig.add_trace(
-    go.Scatter(x=hist.index, y=hist['SMA_50'], name='SMA 50',
-               line=dict(color='#EF553B', width=1.5, dash='dot')),
-    row=1, col=1
-)
+
+if not hist['SMA_20'].isna().all():
+    fig.add_trace(
+        go.Scatter(x=hist.index, y=hist['SMA_20'], name='SMA 20',
+                   line=dict(color='#FFA15A', width=1.5, dash='dash')),
+        row=1, col=1
+    )
+
+if not hist['SMA_50'].isna().all():
+    fig.add_trace(
+        go.Scatter(x=hist.index, y=hist['SMA_50'], name='SMA 50',
+                   line=dict(color='#EF553B', width=1.5, dash='dot')),
+        row=1, col=1
+    )
 
 # Volumen
+colors = ['red' if hist['Close'].iloc[i] < hist['Close'].iloc[i-1] else 'green' 
+          for i in range(1, len(hist))]
+colors.insert(0, 'green')
+
 fig.add_trace(
     go.Bar(x=hist.index, y=hist['Volume'], name='Volumen',
-           marker_color='rgba(99, 110, 250, 0.5)'),
+           marker_color=colors),
     row=2, col=1
 )
 
 # RSI
-fig.add_trace(
-    go.Scatter(x=hist.index, y=hist['RSI'], name='RSI',
-               line=dict(color='#AB63FA', width=2)),
-    row=3, col=1
-)
-# Líneas de sobrecompra y sobreventa
-fig.add_hline(y=70, line_dash="dash", line_color="red", row=3, col=1, opacity=0.5)
-fig.add_hline(y=30, line_dash="dash", line_color="green", row=3, col=1, opacity=0.5)
+if not hist['RSI'].isna().all():
+    fig.add_trace(
+        go.Scatter(x=hist.index, y=hist['RSI'], name='RSI',
+                   line=dict(color='#AB63FA', width=2)),
+        row=3, col=1
+    )
+    # Líneas de sobrecompra y sobreventa
+    fig.add_hline(y=70, line_dash="dash", line_color="red", row=3, col=1, opacity=0.5)
+    fig.add_hline(y=30, line_dash="dash", line_color="green", row=3, col=1, opacity=0.5)
 
 fig.update_layout(height=800, template='plotly_white', showlegend=True, hovermode='x unified')
 fig.update_xaxes(title_text="Fecha", row=3, col=1)
@@ -123,15 +159,7 @@ st.plotly_chart(fig, use_container_width=True)
 st.markdown("---")
 st.subheader("📈 Comparativa vs S&P 500")
 
-@st.cache_data(ttl=1800)
-def get_sp500(per):
-    try:
-        sp500 = yf.Ticker("^GSPC")
-        return sp500.history(period=per)
-    except:
-        return None
-
-sp500 = get_sp500(periodo)
+sp500 = get_sp500_data(periodo)
 
 if sp500 is not None and not sp500.empty:
     # Normalizar precios
@@ -141,7 +169,8 @@ if sp500 is not None and not sp500.empty:
     fig2 = go.Figure()
     fig2.add_trace(go.Scatter(
         x=hist.index, y=norm_stock, name=ticker,
-        line=dict(color='#00CC96', width=2.5)
+        line=dict(color='#00CC96', width=2.5),
+        fill='tonexty'
     ))
     fig2.add_trace(go.Scatter(
         x=sp500.index, y=norm_sp500, name='S&P 500',
@@ -171,6 +200,8 @@ if sp500 is not None and not sp500.empty:
     col2.metric("S&P 500", f"{ret_sp500:.2f}%")
     col3.metric("Alpha", f"{ret_stock - ret_sp500:+.2f}%")
     col4.metric("Volatilidad Anual", f"{vol_anual:.1f}%")
+else:
+    st.warning("⚠️ No se pudo cargar S&P 500 para comparación")
 
 # Indicadores Financieros
 st.markdown("---")
@@ -181,7 +212,10 @@ col1, col2, col3 = st.columns(3)
 with col1:
     st.markdown("##### 📊 Valuación")
     market_cap = info.get('marketCap')
-    st.metric("Capitalización", f"${market_cap/1e9:.2f}B" if market_cap else "N/A")
+    if market_cap:
+        st.metric("Capitalización", f"${market_cap/1e9:.2f}B")
+    else:
+        st.metric("Capitalización", "N/A")
     
     pe = info.get('trailingPE')
     st.metric("P/E Ratio (TTM)", f"{pe:.2f}" if pe else "N/A")
@@ -277,13 +311,6 @@ with st.expander("🏢 Información de la Empresa"):
         st.write(f"**Empleados:** {employees:,}" if employees else "**Empleados:** N/A")
         st.write(f"**Website:** {info.get('website', 'N/A')}")
         st.write(f"**Exchange:** {info.get('exchange', 'N/A')}")
-        st.write(f"**52W High:** ${info.get('fiftyTwoWeekHigh', 0):.2f}")
-        st.write(f"**52W Low:** ${info.get('fiftyTwoWeekLow', 0):.2f}")
-    
-    summary = info.get('longBusinessSummary')
-    if summary:
-        st.markdown("**Descripción del Negocio:**")
-        st.write(summary)
-
-st.markdown("---")
-st.caption(f"📊 Datos: Yahoo Finance | 🕐 Última actualización: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        high_52 = info.get('fiftyTwoWeekHigh', 0)
+        low_52 = info.get('fiftyTwoWeekLow', 0)
+        st.write(f"**52W High:** ${high_52:.2f}" if
