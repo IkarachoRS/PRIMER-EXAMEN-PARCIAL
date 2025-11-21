@@ -4,57 +4,46 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
-import google.generativeai as genai
+from anthropic import Anthropic
 
 st.set_page_config(page_title="Análisis Bursátil", layout="wide", page_icon="📊")
 
-# Configurar Gemini API correctamente
-GEMINI_AVAILABLE = False
+# Configurar Anthropic (Claude) API
+CLAUDE_AVAILABLE = False
 try:
-    GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
-    if GEMINI_API_KEY:
-        genai.configure(api_key=GEMINI_API_KEY)
-        GEMINI_AVAILABLE = True
+    ANTHROPIC_API_KEY = st.secrets.get("ANTHROPIC_API_KEY", "")
+    if ANTHROPIC_API_KEY:
+        client = Anthropic(api_key=ANTHROPIC_API_KEY)
+        CLAUDE_AVAILABLE = True
 except Exception as e:
-    st.sidebar.warning(f"⚠️ Gemini no disponible: {str(e)}")
+    st.sidebar.warning(f"⚠️ Claude no disponible: {str(e)}")
 
-# Función para traducir con Gemini - VERSIÓN BETA
+# Función para traducir con Claude
 def translate_to_spanish_v2(text):
-    """Traduce texto al español usando Gemini 2.0 Flash (Beta/Experimental)"""
-    if not GEMINI_AVAILABLE or not text or len(text) < 10:
+    """Traduce texto al español usando Claude"""
+    if not CLAUDE_AVAILABLE or not text or len(text) < 10:
         return None
     
     try:
-        # USAR MODELO EXPERIMENTAL para API keys BETA
-        # Intentar con gemini-2.0-flash-exp primero
-        model = genai.GenerativeModel('gemini-2.0-flash-exp')
-        
         # Limitar texto a 3000 caracteres
         text_to_translate = text[:3000] if len(text) > 3000 else text
         
-        prompt = f"Traduce este texto del inglés al español de forma profesional y clara:\n\n{text_to_translate}"
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2000,
+            messages=[{
+                "role": "user",
+                "content": f"Traduce este texto del inglés al español de forma profesional y clara. Solo devuelve la traducción, sin explicaciones:\n\n{text_to_translate}"
+            }]
+        )
         
-        response = model.generate_content(prompt)
-        
-        if response and response.text:
-            return response.text.strip()
+        if message.content and len(message.content) > 0:
+            return message.content[0].text.strip()
         else:
             return "Error: No se recibió respuesta del modelo"
             
     except Exception as e:
-        error_str = str(e)
-        # Si falla el modelo experimental, intentar con otro
-        if "404" in error_str or "not found" in error_str.lower():
-            try:
-                # Intentar con gemini-exp-1206 (otro modelo beta)
-                model = genai.GenerativeModel('gemini-exp-1206')
-                response = model.generate_content(f"Traduce al español: {text[:2000]}")
-                if response and response.text:
-                    return response.text.strip()
-            except:
-                pass
-        
-        return f"Error Beta API: {error_str[:150]}"
+        return f"Error Claude: {str(e)[:150]}"
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap');
@@ -307,7 +296,7 @@ st.sidebar.markdown("""
     <div style='text-align: center; padding-top: 20px; border-top: 1px solid #d2d2d7;'>
         <p style='color: #86868b; font-size: 0.75rem; margin: 5px 0;'>
             Powered by<br>
-            <strong>Yahoo Finance & Gemini AI</strong>
+            <strong>Yahoo Finance & Claude AI</strong>
         </p>
     </div>
 """, unsafe_allow_html=True)
@@ -418,29 +407,29 @@ summary = info.get('longBusinessSummary')
 if summary:
     with st.expander("📄 Ver descripción de la empresa"):
         # Indicador de versión - DEBUGGING
-        st.caption("🔄 Beta API - Usando gemini-2.0-flash-exp (experimental)")
+        st.caption("🔄 Powered by Claude AI - Anthropic")
         
         st.markdown("**Descripción Original (Inglés):**")
         st.markdown(f"<div style='color: #1d1d1f;'>{summary}</div>", unsafe_allow_html=True)
         
-        # Traducción con Gemini
-        if GEMINI_AVAILABLE:
-            with st.spinner("🤖 Traduciendo con Gemini AI..."):
+        # Traducción con Claude
+        if CLAUDE_AVAILABLE:
+            with st.spinner("🤖 Traduciendo con Claude AI..."):
                 traduccion = translate_to_spanish_v2(summary)
                 
                 if traduccion and not traduccion.startswith("Error"):
                     st.markdown("<br>", unsafe_allow_html=True)
                     st.markdown("<div class='translation-box'>", unsafe_allow_html=True)
-                    st.markdown("**📝 Traducción al Español (powered by Gemini Pro):**")
+                    st.markdown("**📝 Traducción al Español (powered by Claude):**")
                     st.markdown(f"<div style='color: #1d1d1f;'>{traduccion}</div>", unsafe_allow_html=True)
                     st.markdown("</div>", unsafe_allow_html=True)
                 elif traduccion:
                     st.error(f"❌ {traduccion}")
-                    st.info("💡 Verifica tu API key en https://aistudio.google.com/apikey")
+                    st.info("💡 Verifica tu API key de Anthropic en Settings → Secrets")
                 else:
                     st.warning("⚠️ No se pudo traducir")
         else:
-            st.info("🔑 Configura GEMINI_API_KEY en Settings → Secrets")
+            st.info("🔑 **Para activar la traducción con Claude:**\n\n1. Ve a Settings → Secrets\n2. Agrega: `ANTHROPIC_API_KEY = \"tu-api-key\"`")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -948,11 +937,9 @@ with tab4:
     
     # Generar análisis AI
     if st.button("🚀 Generar Análisis AI Completo", type="primary", use_container_width=True):
-        with st.spinner("🤖 Gemini AI está analizando la empresa..."):
-            if GEMINI_AVAILABLE:
+        with st.spinner("🤖 Claude AI está analizando la empresa..."):
+            if CLAUDE_AVAILABLE:
                 try:
-                    model = genai.GenerativeModel('gemini-2.0-flash-exp')
-                    
                     # Preparar datos para análisis
                     datos_empresa = f"""
 Analiza la siguiente empresa:
@@ -985,11 +972,16 @@ Genera un análisis financiero profesional en español con:
 
 Sé específico, profesional y basado en datos."""
                     
-                    response = model.generate_content(prompt)
+                    message = client.messages.create(
+                        model="claude-sonnet-4-20250514",
+                        max_tokens=4000,
+                        messages=[{"role": "user", "content": prompt}]
+                    )
                     
-                    if response and response.text:
+                    if message.content and len(message.content) > 0:
+                        analisis = message.content[0].text
                         st.markdown("#### 📋 Reporte de Análisis")
-                        st.markdown(f"<div style='background: white; padding: 25px; border-radius: 12px; border-left: 4px solid #0071e3;'>{response.text}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='background: white; padding: 25px; border-radius: 12px; border-left: 4px solid #0071e3;'>{analisis}</div>", unsafe_allow_html=True)
                         
                         # Disclaimer
                         st.warning("⚠️ **Disclaimer:** Este análisis es generado por IA y no constituye asesoría financiera. Consulta con un profesional antes de invertir.")
@@ -999,7 +991,7 @@ Sé específico, profesional y basado en datos."""
                 except Exception as e:
                     st.error(f"Error al generar análisis: {str(e)}")
             else:
-                st.error("🔑 Gemini AI no está disponible. Configura tu API key en Settings → Secrets")
+                st.error("🔑 Claude AI no está disponible. Configura tu API key en Settings → Secrets")
     
     st.markdown("---")
     
@@ -1255,6 +1247,6 @@ with tab5:
 st.markdown("<br><br>", unsafe_allow_html=True)
 st.markdown(
     f"<p style='text-align: center; color: #86868b; font-size: 0.9rem;'>📊 Datos: Yahoo Finance | "
-    f"🤖 Traducción: Google Gemini AI | {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}</p>",
+    f"🤖 IA: Claude (Anthropic) | {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}</p>",
     unsafe_allow_html=True
 )
