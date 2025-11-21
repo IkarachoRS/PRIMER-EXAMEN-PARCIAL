@@ -1,181 +1,189 @@
-# 📈 Análisis Bursátil Comparativo
+# 📊 Plataforma Profesional de Análisis Bursátil
 
-Aplicación web interactiva desarrollada con Streamlit para realizar análisis financiero profesional de acciones con comparativa contra el S&P 500.
+Aplicación web avanzada para análisis financiero profesional con IA, desarrollada con Streamlit y potenciada por Google Gemini AI.
 
-## 🎯 Características
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://tu-app.streamlit.app)
 
-- **Búsqueda Inteligente**: Busca empresas por ticker o nombre
-- **Información Empresarial**: Resumen completo de la empresa incluyendo sector, industria, empleados y descripción del negocio
-- **Análisis Técnico**: Gráficas interactivas de precios históricos con volumen
-- **Comparativa S&P 500**: Rendimiento normalizado vs el índice de referencia
-- **Métricas de Riesgo**:
-  - Volatilidad anualizada
-  - Sharpe Ratio
+## 🚀 Características Principales
+
+### 📈 **Análisis Técnico Avanzado**
+- **Gráficas de velas (Candlestick)** estilo TradingView
+- **Indicadores técnicos:**
+  - Bandas de Bollinger
+  - MACD (Moving Average Convergence Divergence)
+  - RSI (Relative Strength Index)
+  - SMA 20 y SMA 50
+- **4 paneles integrados** con volumen y análisis completo
+- **Señales técnicas automáticas** (compra/venta/neutral)
+
+### 📊 **Comparativa vs S&P 500**
+- Rendimiento normalizado (Base 100)
+- Gráfica de outperformance
+- **Métricas avanzadas:**
+  - Alpha
   - Beta
-  - Correlación con el mercado
-  - Máximo Drawdown
-- **Indicadores Financieros**:
-  - Ratios de valuación (P/E, P/B, PEG)
-  - Métricas de rentabilidad (ROE, ROA, márgenes)
-  - Análisis de dividendos y estructura de capital
-- **Caché de Datos**: Optimización del rendimiento con actualización cada hora
-- **Interfaz Responsive**: Diseño adaptable para diferentes dispositivos
+  - Correlación
+  - Sharpe Ratio
+  - Volatilidad anualizada
+
+### 💰 **Indicadores Financieros**
+- **Valuación:** P/E, P/B, P/S, PEG, Market Cap
+- **Rentabilidad:** ROE, ROA, ROIC, Márgenes
+- **Crecimiento:** EPS, Revenue Growth, Earnings Growth
+- **Solvencia:** Debt/Equity, Current Ratio, Quick Ratio
+- **Dividendos:** Yield, Payout Ratio, Dividendo Anual
+
+### 🤖 **Análisis AI con Gemini** (NUEVO)
+- **Reportes automáticos generados por IA:**
+  - Resumen ejecutivo
+  - Análisis fundamental y técnico
+  - Evaluación de riesgos
+  - Recomendación de inversión
+  - Precio objetivo estimado
+- **Sistema de scoring inteligente:**
+  - Score de Valuación
+  - Score de Rentabilidad  
+  - Score de Solvencia
+  - Score Total (0-100)
+
+### 🛠️ **Herramientas Avanzadas** (NUEVO)
+
+#### 💰 Calculadora de Inversión
+- Simulación de inversiones con capital real
+- Cálculo automático de número de acciones
+- Proyección de ganancias/pérdidas
+- ROI y precio objetivo personalizado
+- Gráfica de escenarios de inversión
+
+#### 📊 Comparativa Múltiple
+- Comparar hasta 5 acciones simultáneamente
+- Tabla con métricas clave
+- Gráfica de rendimiento comparativo
+- Análisis side-by-side en tiempo real
+
+#### 🎯 Análisis Riesgo-Retorno
+- Matriz de riesgo-retorno interactiva
+- Clasificación automática por cuadrantes
+- Sharpe Ratio
+- Interpretación inteligente
+- Recomendaciones basadas en perfil de riesgo
+
+### 🌐 **Traducción Automática**
+- Descripción de empresas traducida al español
+- Powered by Google Gemini AI
+- Contexto completo en inglés y español
+
+## 🎨 Diseño
+
+- **Estilo Apple/Fintech** - Minimalista y profesional
+- **Tema claro optimizado** para análisis
+- **Gráficas interactivas** con Plotly
+- **Responsive design** - Funciona en móvil, tablet y desktop
+- **Sidebar moderno** con acciones populares
 
 ## 🚀 Demo en Vivo
 
-[Ver aplicación en vivo](https://tu-app.streamlit.app) *(Actualizar con tu URL de Streamlit Cloud)*
+[Ver aplicación →](https://tu-app.streamlit.app)
 
-## 📋 Requisitos Previos
+## 📋 Requisitos
 
-- Python 3.8 o superior
-- pip (gestor de paquetes de Python)
+- Python 3.8+
+- API Key de Google Gemini (gratuita)
 
 ## 🔧 Instalación Local
 
-1. **Clonar el repositorio**
 ```bash
+# Clonar repositorio
 git clone https://github.com/tu-usuario/stock-analysis-app.git
 cd stock-analysis-app
-```
 
-2. **Crear entorno virtual (recomendado)**
-```bash
+# Crear entorno virtual
 python -m venv venv
+source venv/bin/activate  # En Windows: venv\Scripts\activate
 
-# En Windows
-venv\Scripts\activate
-
-# En macOS/Linux
-source venv/bin/activate
-```
-
-3. **Instalar dependencias**
-```bash
+# Instalar dependencias
 pip install -r requirements.txt
-```
 
-4. **Ejecutar la aplicación**
-```bash
+# Configurar API Key (crear .streamlit/secrets.toml)
+mkdir .streamlit
+echo 'GEMINI_API_KEY = "tu-api-key-aqui"' > .streamlit/secrets.toml
+
+# Ejecutar
 streamlit run app.py
 ```
 
-La aplicación se abrirá automáticamente en tu navegador en `http://localhost:8501`
+## 🔑 Obtener API Key de Gemini
 
-## 📦 Dependencias
-
-```
-streamlit==1.29.0
-yfinance==0.2.32
-pandas==2.1.3
-plotly==5.18.0
-numpy==1.26.2
-```
-
-## 💻 Uso
-
-1. **Ingresar Ticker**: En la barra lateral, ingresa el ticker de la empresa (ej: AAPL, TSLA, GOOGL) o su nombre
-2. **Seleccionar Período**: Elige el período de análisis (1 mes a histórico completo)
-3. **Analizar**: La aplicación mostrará automáticamente:
-   - Métricas principales (precio, cambio %, capitalización)
-   - Resumen de la empresa
-   - Gráfica comparativa vs S&P 500
-   - Métricas de rendimiento y riesgo
-   - Indicadores financieros detallados
-
-## 📊 Ejemplos de Tickers
-
-| Empresa | Ticker |
-|---------|--------|
-| Apple | AAPL |
-| Microsoft | MSFT |
-| Tesla | TSLA |
-| Amazon | AMZN |
-| Google | GOOGL |
-| Meta | META |
-| NVIDIA | NVDA |
-| Netflix | NFLX |
+1. Ve a [Google AI Studio](https://aistudio.google.com/apikey)
+2. Click en "Create API key"
+3. Copia tu API key
+4. Agrégala en `.streamlit/secrets.toml`
 
 ## 🌐 Despliegue en Streamlit Cloud
 
-1. **Subir a GitHub**
-   - Asegúrate de tener todos los archivos (`app.py`, `requirements.txt`, `README.md`)
-   - Haz push a tu repositorio
+1. Sube tu código a GitHub
+2. Ve a [share.streamlit.io](https://share.streamlit.io)
+3. Conecta tu repositorio
+4. En **Settings → Secrets**, agrega:
+   ```toml
+   GEMINI_API_KEY = "tu-api-key"
+   ```
+5. ¡Deploy!
 
-2. **Conectar con Streamlit Cloud**
-   - Visita [share.streamlit.io](https://share.streamlit.io)
-   - Inicia sesión con GitHub
-   - Selecciona tu repositorio
-   - Configura:
-     - **Main file path**: `app.py`
-     - **Python version**: 3.11
-   - Click en "Deploy"
+## 📦 Dependencias
 
-3. **Compartir**
-   - Tu app estará disponible en: `https://[tu-app-name].streamlit.app`
-
-## 🏗️ Estructura del Proyecto
-
-```
-stock-analysis-app/
-│
-├── app.py                 # Aplicación principal de Streamlit
-├── requirements.txt       # Dependencias del proyecto
-├── README.md             # Documentación
-└── .gitignore            # Archivos a ignorar en Git
+```txt
+streamlit - Framework web
+yfinance - Datos financieros de Yahoo Finance
+pandas - Manipulación de datos
+plotly - Gráficas interactivas
+numpy - Cálculos numéricos
+google-generativeai - API de Gemini AI
 ```
 
-## 🛠️ Tecnologías Utilizadas
+## 📊 Datos y APIs
 
-- **[Streamlit](https://streamlit.io/)**: Framework para aplicaciones web de datos
-- **[yfinance](https://github.com/ranaroussi/yfinance)**: API para obtener datos financieros de Yahoo Finance
-- **[Plotly](https://plotly.com/)**: Visualizaciones interactivas
-- **[Pandas](https://pandas.pydata.org/)**: Manipulación y análisis de datos
-- **[NumPy](https://numpy.org/)**: Cálculos numéricos
+- **Yahoo Finance** - Datos históricos y fundamentales
+- **Google Gemini AI** - Análisis y traducción automática
+- Datos actualizados cada 30 minutos (caché)
 
-## 📈 Métricas Calculadas
+## 🎯 Casos de Uso
 
-### Rendimiento
-- **Rendimiento Total**: Ganancia/pérdida porcentual en el período
-- **Rendimiento vs S&P 500**: Diferencial de rendimiento contra el benchmark
+- Análisis profesional de acciones
+- Comparación de inversiones
+- Simulación de portafolios
+- Educación financiera
+- Reportes automáticos con IA
+- Análisis técnico avanzado
 
-### Riesgo
-- **Volatilidad**: Desviación estándar anualizada de los retornos
-- **Beta**: Sensibilidad de la acción respecto al mercado (S&P 500)
-- **Correlación**: Relación lineal con el S&P 500 (-1 a 1)
-- **Maximum Drawdown**: Mayor caída desde un máximo histórico
+## ⚠️ Disclaimer
 
-### Eficiencia
-- **Sharpe Ratio**: Rendimiento ajustado por riesgo (usando tasa libre de riesgo del 4%)
+Esta aplicación es solo para fines educativos e informativos. Los análisis generados por IA no constituyen asesoría financiera. Consulta con un profesional certificado antes de tomar decisiones de inversión.
 
-## ⚠️ Limitaciones
+## 🛣️ Roadmap
 
-- Los datos provienen de Yahoo Finance y pueden tener un retraso de ~15 minutos
-- Algunos tickers internacionales pueden requerir sufijos específicos (ej: `.MX` para México)
-- La aplicación no constituye asesoría financiera
+- [ ] Portfolio tracking completo
+- [ ] Alertas de precio por email/SMS
+- [ ] Análisis de sentimiento de noticias
+- [ ] Backtesting de estrategias
+- [ ] Exportación de reportes en PDF
+- [ ] Integración con brokers
+- [ ] Watchlist personalizada con almacenamiento
+- [ ] Notificaciones push
 
 ## 🤝 Contribuciones
 
 Las contribuciones son bienvenidas. Para cambios importantes:
 
 1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
+2. Crea tu rama (`git checkout -b feature/AmazingFeature`)
+3. Commit (`git commit -m 'Add AmazingFeature'`)
+4. Push (`git push origin feature/AmazingFeature`)
 5. Abre un Pull Request
-
-## 📝 Ideas para Mejoras Futuras
-
-- [ ] Agregar análisis técnico (RSI, MACD, Bandas de Bollinger)
-- [ ] Implementar gráficas de velas japonesas
-- [ ] Comparativa con múltiples empresas simultáneamente
-- [ ] Exportación de reportes en PDF
-- [ ] Alertas de precio personalizadas
-- [ ] Integración con portfolio tracking
-- [ ] Análisis de sentimiento de noticias
 
 ## 📄 Licencia
 
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+MIT License - Ver [LICENSE](LICENSE) para más detalles
 
 ## 👤 Autor
 
@@ -185,10 +193,13 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 
 ## 🙏 Agradecimientos
 
-- [Yahoo Finance](https://finance.yahoo.com/) por proporcionar datos financieros gratuitos
-- [Streamlit](https://streamlit.io/) por el increíble framework
-- La comunidad de código abierto por las librerías utilizadas
+- [Yahoo Finance](https://finance.yahoo.com/) - Datos financieros
+- [Google Gemini](https://ai.google.dev/) - IA y traducción
+- [Streamlit](https://streamlit.io/) - Framework web
+- [Plotly](https://plotly.com/) - Visualizaciones
 
 ---
 
-⭐ Si este proyecto te resulta útil, considera darle una estrella en GitHub!
+⭐ Si te resulta útil, ¡dale una estrella al repo!
+
+**Hecho con ❤️ para la comunidad financiera**
