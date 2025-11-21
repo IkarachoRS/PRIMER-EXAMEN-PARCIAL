@@ -494,10 +494,30 @@ col3.metric("📉 Mínimo", f"${minimo:.2f}")
 col4.metric("📊 Vol. Promedio", f"{volumen_prom/1e6:.1f}M")
 col5.metric("🎯 RSI", f"{rsi_actual:.1f}")
 
+# Cargar S&P 500 para comparaciones
+sp500 = get_sp500_data(periodo)
+
+# Calcular variables necesarias para tabs avanzados
+if sp500 is not None and not sp500.empty:
+    ret_stock = ((float(hist['Close'].iloc[-1]) / float(hist['Close'].iloc[0])) - 1) * 100
+    ret_sp500 = ((float(sp500['Close'].iloc[-1]) / float(sp500['Close'].iloc[0])) - 1) * 100
+else:
+    ret_stock = ((float(hist['Close'].iloc[-1]) / float(hist['Close'].iloc[0])) - 1) * 100
+    ret_sp500 = 0
+
+returns_stock = hist['Close'].pct_change().dropna()
+vol_anual = returns_stock.std() * np.sqrt(252) * 100
+
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ============ TABS ============
-tab1, tab2, tab3 = st.tabs(["📈 Análisis Técnico", "📊 Comparativa S&P 500", "💰 Indicadores Financieros"])
+# ============ TABS CON HERRAMIENTAS AVANZADAS ============
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "📈 Análisis Técnico", 
+    "📊 Comparativa S&P 500", 
+    "💰 Indicadores Financieros",
+    "🤖 Análisis AI & Noticias",
+    "🛠️ Herramientas Avanzadas"
+])
 
 with tab1:
     st.markdown("### Análisis Técnico Avanzado")
@@ -726,8 +746,6 @@ with tab1:
 
 with tab2:
     st.markdown("### Comparativa vs S&P 500")
-    
-    sp500 = get_sp500_data(periodo)
 
     if sp500 is not None and not sp500.empty:
         norm_stock = (hist['Close'] / float(hist['Close'].iloc[0])) * 100
@@ -813,13 +831,8 @@ with tab2:
         st.plotly_chart(fig2, use_container_width=True)
         
         # Métricas de rendimiento mejoradas
-        ret_stock = ((float(hist['Close'].iloc[-1]) / float(hist['Close'].iloc[0])) - 1) * 100
-        ret_sp500 = ((float(sp500['Close'].iloc[-1]) / float(sp500['Close'].iloc[0])) - 1) * 100
-        returns_stock = hist['Close'].pct_change().dropna()
-        returns_sp500 = sp500['Close'].pct_change().dropna()
-        vol_anual = returns_stock.std() * np.sqrt(252) * 100
-        
         # Calcular correlación y beta
+        returns_sp500 = sp500['Close'].pct_change().dropna()
         common_dates = returns_stock.index.intersection(returns_sp500.index)
         if len(common_dates) > 20:
             ret_s = returns_stock.loc[common_dates]
@@ -928,6 +941,316 @@ with tab3:
     with col4:
         beta = info.get('beta')
         st.metric("Beta (5Y)", f"{beta:.2f}" if beta else "N/A")
+
+# ============ TAB 4: ANÁLISIS AI & NOTICIAS ============
+with tab4:
+    st.markdown("### 🤖 Análisis Inteligente con IA")
+    
+    # Generar análisis AI
+    if st.button("🚀 Generar Análisis AI Completo", type="primary", use_container_width=True):
+        with st.spinner("🤖 Gemini AI está analizando la empresa..."):
+            if GEMINI_AVAILABLE:
+                try:
+                    model = genai.GenerativeModel('gemini-2.0-flash-exp')
+                    
+                    # Preparar datos para análisis
+                    datos_empresa = f"""
+Analiza la siguiente empresa:
+- Nombre: {info.get('longName', ticker)}
+- Ticker: {ticker}
+- Sector: {info.get('sector', 'N/A')}
+- Precio actual: ${precio:.2f}
+- P/E Ratio: {info.get('trailingPE', 'N/A')}
+- Market Cap: ${info.get('marketCap', 0)/1e9:.2f}B
+- Beta: {info.get('beta', 'N/A')}
+- ROE: {info.get('returnOnEquity', 0)*100:.2f}%
+- Debt/Equity: {info.get('debtToEquity', 'N/A')}
+- Dividend Yield: {info.get('dividendYield', 0)*100:.2f}%
+- Rendimiento últimos {periodo}: {ret_stock:.2f}%
+- Volatilidad: {vol_anual:.1f}%
+- RSI: {rsi_actual:.1f}
+"""
+                    
+                    prompt = f"""{datos_empresa}
+
+Genera un análisis financiero profesional en español con:
+
+1. **Resumen Ejecutivo** (3-4 líneas)
+2. **Análisis Fundamental** (fortalezas y debilidades)
+3. **Análisis Técnico** (interpretación de indicadores)
+4. **Valoración** (¿está cara o barata?)
+5. **Riesgos Principales** (3-4 puntos)
+6. **Recomendación** (Compra/Mantener/Venta con justificación)
+7. **Precio Objetivo** (estimación razonada)
+
+Sé específico, profesional y basado en datos."""
+                    
+                    response = model.generate_content(prompt)
+                    
+                    if response and response.text:
+                        st.markdown("#### 📋 Reporte de Análisis")
+                        st.markdown(f"<div style='background: white; padding: 25px; border-radius: 12px; border-left: 4px solid #0071e3;'>{response.text}</div>", unsafe_allow_html=True)
+                        
+                        # Disclaimer
+                        st.warning("⚠️ **Disclaimer:** Este análisis es generado por IA y no constituye asesoría financiera. Consulta con un profesional antes de invertir.")
+                    else:
+                        st.error("No se pudo generar el análisis")
+                        
+                except Exception as e:
+                    st.error(f"Error al generar análisis: {str(e)}")
+            else:
+                st.error("🔑 Gemini AI no está disponible. Configura tu API key en Settings → Secrets")
+    
+    st.markdown("---")
+    
+    # Noticias en tiempo real
+    st.markdown("### 📰 Noticias Recientes")
+    
+    if st.button("🔍 Buscar Noticias Actuales", use_container_width=True):
+        with st.spinner(f"Buscando noticias sobre {ticker}..."):
+            try:
+                # Aquí usarías web_search pero por ahora lo simulo
+                st.info("📰 Funcionalidad de búsqueda de noticias en desarrollo. Próximamente disponible con integración de APIs de noticias.")
+                
+                # Puedes agregar esto si tienes acceso a web_search:
+                # from anthropic import Anthropic
+                # client = Anthropic()
+                # news = client.web_search(query=f"{ticker} stock news latest")
+                
+            except Exception as e:
+                st.error(f"Error al buscar noticias: {str(e)}")
+    
+    st.markdown("---")
+    
+    # Score de Valoración
+    st.markdown("### 🎯 Score de Valoración")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    # Calcular scores simples
+    pe = info.get('trailingPE', 0)
+    pe_score = 100 if pe and pe < 15 else 50 if pe and pe < 25 else 25 if pe else 0
+    
+    roe = info.get('returnOnEquity', 0)
+    roe_score = 100 if roe and roe > 0.15 else 50 if roe and roe > 0.10 else 25 if roe else 0
+    
+    debt_eq = info.get('debtToEquity', 0)
+    debt_score = 100 if debt_eq and debt_eq < 0.5 else 50 if debt_eq and debt_eq < 1 else 25 if debt_eq else 0
+    
+    score_total = (pe_score + roe_score + debt_score) / 3
+    
+    with col1:
+        st.metric("📊 Score Valuación", f"{pe_score}/100")
+    with col2:
+        st.metric("💰 Score Rentabilidad", f"{roe_score}/100")
+    with col3:
+        st.metric("🏦 Score Solvencia", f"{debt_score}/100")
+    
+    # Score total con gauge visual
+    score_color = "#30d158" if score_total > 70 else "#ff9500" if score_total > 40 else "#ff375f"
+    st.markdown(f"""
+        <div style='text-align: center; padding: 20px; background: white; border-radius: 12px; margin-top: 20px;'>
+            <h2 style='color: {score_color}; font-size: 3rem; margin: 0;'>{score_total:.0f}/100</h2>
+            <p style='color: #86868b; margin: 5px 0;'>Score Total de Inversión</p>
+            <div style='background: #f5f5f7; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 10px;'>
+                <div style='background: {score_color}; width: {score_total}%; height: 100%;'></div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+# ============ TAB 5: HERRAMIENTAS AVANZADAS ============
+with tab5:
+    st.markdown("### 🛠️ Calculadoras y Herramientas")
+    
+    tool_option = st.selectbox(
+        "Selecciona una herramienta:",
+        ["💰 Calculadora de Inversión", "📊 Comparar Múltiples Acciones", "🎯 Análisis de Riesgo/Retorno"]
+    )
+    
+    if tool_option == "💰 Calculadora de Inversión":
+        st.markdown("#### Simulador de Inversión")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            inversion_inicial = st.number_input("💵 Inversión Inicial (USD)", min_value=100, max_value=1000000, value=10000, step=100)
+            num_acciones = int(inversion_inicial / precio)
+            st.info(f"Podrías comprar aproximadamente **{num_acciones:,} acciones** al precio actual")
+        
+        with col2:
+            precio_objetivo = st.number_input("🎯 Precio Objetivo (USD)", min_value=1.0, value=float(precio * 1.2), step=1.0)
+            ganancia_potencial = ((precio_objetivo - precio) / precio) * 100
+        
+        st.markdown("---")
+        st.markdown("#### 📊 Resultados de la Simulación")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        valor_futuro = num_acciones * precio_objetivo
+        ganancia_total = valor_futuro - inversion_inicial
+        
+        col1.metric("💵 Inversión Inicial", f"${inversion_inicial:,.2f}")
+        col2.metric("📈 Valor Futuro", f"${valor_futuro:,.2f}")
+        col3.metric("💰 Ganancia/Pérdida", f"${ganancia_total:,.2f}", f"{ganancia_potencial:+.2f}%")
+        col4.metric("🎯 ROI", f"{ganancia_potencial:.2f}%")
+        
+        # Gráfica de proyección
+        import plotly.graph_objects as go
+        
+        precios_proyeccion = [precio, precio * 1.05, precio * 1.10, precio * 1.15, precio_objetivo]
+        valores_proyeccion = [p * num_acciones for p in precios_proyeccion]
+        
+        fig_proj = go.Figure()
+        fig_proj.add_trace(go.Scatter(
+            x=["Hoy", "Escenario 1", "Escenario 2", "Escenario 3", "Objetivo"],
+            y=valores_proyeccion,
+            mode='lines+markers',
+            line=dict(color='#0071e3', width=3),
+            marker=dict(size=10),
+            fill='tozeroy',
+            fillcolor='rgba(0, 113, 227, 0.1)'
+        ))
+        
+        fig_proj.update_layout(
+            title="Proyección de Valor de Inversión",
+            yaxis_title="Valor (USD)",
+            height=350,
+            template='plotly_white'
+        )
+        
+        st.plotly_chart(fig_proj, use_container_width=True)
+    
+    elif tool_option == "📊 Comparar Múltiples Acciones":
+        st.markdown("#### Comparativa de Acciones")
+        
+        st.info("💡 Ingresa hasta 5 tickers para comparar (separados por comas)")
+        
+        tickers_comparar = st.text_input("Tickers a comparar:", value=f"{ticker}, MSFT, GOOGL", placeholder="AAPL, MSFT, GOOGL")
+        tickers_list = [t.strip().upper() for t in tickers_comparar.split(",") if t.strip()]
+        
+        if st.button("📊 Comparar", type="primary") and len(tickers_list) > 1:
+            with st.spinner("Cargando datos para comparación..."):
+                comparacion_data = []
+                
+                for tick in tickers_list[:5]:  # Máximo 5
+                    try:
+                        stock_comp = yf.Ticker(tick)
+                        hist_comp = stock_comp.history(period=periodo)
+                        info_comp = stock_comp.info
+                        
+                        if not hist_comp.empty:
+                            precio_comp = float(hist_comp['Close'].iloc[-1])
+                            ret_comp = ((precio_comp / float(hist_comp['Close'].iloc[0])) - 1) * 100
+                            
+                            comparacion_data.append({
+                                'Ticker': tick,
+                                'Precio': f"${precio_comp:.2f}",
+                                'Rendimiento': f"{ret_comp:+.2f}%",
+                                'P/E': f"{info_comp.get('trailingPE', 0):.2f}" if info_comp.get('trailingPE') else "N/A",
+                                'Market Cap': f"${info_comp.get('marketCap', 0)/1e9:.2f}B" if info_comp.get('marketCap') else "N/A",
+                                'Beta': f"{info_comp.get('beta', 0):.2f}" if info_comp.get('beta') else "N/A"
+                            })
+                    except:
+                        continue
+                
+                if comparacion_data:
+                    df_comp = pd.DataFrame(comparacion_data)
+                    st.dataframe(df_comp, use_container_width=True, hide_index=True)
+                    
+                    # Gráfica comparativa
+                    fig_comp = go.Figure()
+                    
+                    for tick in tickers_list[:5]:
+                        try:
+                            hist_c = yf.Ticker(tick).history(period=periodo)
+                            if not hist_c.empty:
+                                norm = (hist_c['Close'] / float(hist_c['Close'].iloc[0])) * 100
+                                fig_comp.add_trace(go.Scatter(
+                                    x=hist_c.index,
+                                    y=norm,
+                                    name=tick,
+                                    mode='lines',
+                                    line=dict(width=2.5)
+                                ))
+                        except:
+                            continue
+                    
+                    fig_comp.update_layout(
+                        title="Comparativa de Rendimiento (Base 100)",
+                        yaxis_title="Rendimiento (%)",
+                        height=500,
+                        template='plotly_white',
+                        hovermode='x unified'
+                    )
+                    
+                    st.plotly_chart(fig_comp, use_container_width=True)
+                else:
+                    st.error("No se pudieron cargar los datos de comparación")
+    
+    else:  # Análisis Riesgo/Retorno
+        st.markdown("#### 📈 Análisis de Riesgo vs Retorno")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.metric("📊 Rendimiento Anualizado", f"{ret_stock:.2f}%")
+            st.metric("📉 Volatilidad Anual", f"{vol_anual:.1f}%")
+            st.metric("🎯 Sharpe Ratio", f"{((ret_stock/100 - 0.04) / (vol_anual/100)):.2f}" if vol_anual > 0 else "N/A")
+        
+        with col2:
+            riesgo_nivel = "🟢 BAJO" if vol_anual < 20 else "🟡 MEDIO" if vol_anual < 35 else "🔴 ALTO"
+            st.metric("⚠️ Nivel de Riesgo", riesgo_nivel)
+            
+            rendimiento_nivel = "🟢 ALTO" if ret_stock > 15 else "🟡 MODERADO" if ret_stock > 0 else "🔴 NEGATIVO"
+            st.metric("📈 Nivel de Rendimiento", rendimiento_nivel)
+        
+        # Matriz de Riesgo-Retorno
+        st.markdown("---")
+        st.markdown("#### 🎯 Posición en Matriz Riesgo-Retorno")
+        
+        fig_matriz = go.Figure()
+        
+        # Cuadrantes
+        fig_matriz.add_shape(type="rect", x0=0, y0=0, x1=50, y1=50, fillcolor="rgba(255, 55, 95, 0.1)", line_width=0)
+        fig_matriz.add_shape(type="rect", x0=0, y0=0, x1=50, y1=-50, fillcolor="rgba(255, 149, 0, 0.1)", line_width=0)
+        fig_matriz.add_shape(type="rect", x0=0, y0=0, x1=-50, y1=50, fillcolor="rgba(255, 204, 0, 0.1)", line_width=0)
+        fig_matriz.add_shape(type="rect", x0=0, y0=0, x1=-50, y1=-50, fillcolor="rgba(48, 209, 88, 0.1)", line_width=0)
+        
+        # Punto de la acción
+        fig_matriz.add_trace(go.Scatter(
+            x=[ret_stock],
+            y=[vol_anual],
+            mode='markers+text',
+            marker=dict(size=20, color='#0071e3'),
+            text=[ticker],
+            textposition='top center',
+            name=ticker,
+            textfont=dict(size=14, color='#1d1d1f')
+        ))
+        
+        fig_matriz.update_layout(
+            title="Matriz Riesgo-Retorno",
+            xaxis_title="Rendimiento (%)",
+            yaxis_title="Volatilidad (%)",
+            height=500,
+            template='plotly_white',
+            xaxis=dict(zeroline=True, zerolinewidth=2, zerolinecolor='#1d1d1f'),
+            yaxis=dict(zeroline=True, zerolinewidth=2, zerolinecolor='#1d1d1f')
+        )
+        
+        st.plotly_chart(fig_matriz, use_container_width=True)
+        
+        # Interpretación
+        if ret_stock > 0 and vol_anual < 25:
+            interpretacion = "✅ **Excelente:** Alto retorno con volatilidad controlada"
+        elif ret_stock > 0 and vol_anual >= 25:
+            interpretacion = "⚠️ **Cuidado:** Buenos retornos pero alta volatilidad"
+        elif ret_stock <= 0 and vol_anual < 25:
+            interpretacion = "⚡ **Revisar:** Bajo retorno aunque volatilidad moderada"
+        else:
+            interpretacion = "❌ **Alto Riesgo:** Retornos negativos y alta volatilidad"
+        
+        st.info(interpretacion)
 
 st.markdown("<br><br>", unsafe_allow_html=True)
 st.markdown(
